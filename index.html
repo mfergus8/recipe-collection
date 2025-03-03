@@ -14,6 +14,7 @@
             --tag-color: #6c5ce7;
             --tag-bg: #e4e0ff;
             --filter-bg: #f1f5f9;
+            --google-red: #ea4335;
         }
         
         * {
@@ -146,6 +147,25 @@
         
         button.secondary:hover {
             background-color: #3dbbb0;
+        }
+        
+        button.google-login {
+            background-color: white;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        button.google-login img {
+            width: 18px;
+            height: 18px;
+        }
+        
+        button.google-login:hover {
+            background-color: #f5f5f5;
         }
         
         #recipe-list-container {
@@ -680,21 +700,42 @@
 
         #login-ui {
             display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .auth-inputs {
+            display: flex;
             flex-wrap: wrap;
             justify-content: center;
             gap: 10px;
+            margin-bottom: 10px;
+            width: 100%;
+            max-width: 500px;
         }
 
-        #login-ui input {
+        .auth-inputs input {
             padding: 10px;
             border: 1px solid var(--border-color);
             border-radius: 4px;
+            flex: 1;
             min-width: 200px;
         }
 
-        #login-ui button, #user-ui button {
-            width: auto;
-            min-width: 100px;
+        .auth-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .auth-buttons button {
+            flex: 1;
+            min-width: 150px;
+            max-width: 200px;
         }
 
         #user-ui {
@@ -730,44 +771,24 @@
             justify-content: center;
         }
 
-        /* Email verification banner */
-        .verification-banner {
-            background-color: #fcf8e3;
-            color: #8a6d3b;
-            padding: 10px 15px;
-            margin-bottom: 15px;
-            border-radius: 4px;
+        .or-divider {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            margin: 15px 0;
+            width: 100%;
+            max-width: 500px;
         }
 
-        .verification-banner.success {
-            background-color: #dff0d8;
-            color: #3c763d;
+        .or-divider::before,
+        .or-divider::after {
+            content: "";
+            flex: 1;
+            border-bottom: 1px solid var(--border-color);
         }
 
-        .verification-banner button {
-            width: auto;
-            padding: 5px 10px;
-            font-size: 14px;
-            margin-left: 10px;
-        }
-
-        /* Password reset link */
-        .forgot-password {
-            text-align: center;
-            margin-top: 10px;
-        }
-
-        .forgot-password a {
-            color: var(--secondary-color);
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        .forgot-password a:hover {
-            text-decoration: underline;
+        .or-divider span {
+            padding: 0 10px;
+            color: #666;
         }
     </style>
 </head>
@@ -777,28 +798,29 @@
     <!-- Auth UI -->
     <div id="auth-container">
         <div id="login-ui">
-            <input type="email" id="email-input" placeholder="Email">
-            <input type="password" id="password-input" placeholder="Password">
-            <button id="login-btn">Log In</button>
-            <button id="signup-btn" class="secondary">Sign Up</button>
+            <div class="auth-inputs">
+                <input type="email" id="email-input" placeholder="Email">
+                <input type="password" id="password-input" placeholder="Password">
+            </div>
+            <div class="auth-buttons">
+                <button id="login-btn">Log In</button>
+                <button id="signup-btn" class="secondary">Sign Up</button>
+            </div>
+            <div class="or-divider">
+                <span>OR</span>
+            </div>
+            <div class="auth-buttons">
+                <button id="google-login-btn" class="google-login">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google Logo">
+                    Sign in with Google
+                </button>
+            </div>
         </div>
         <div id="user-ui" style="display: none;">
             <span id="user-email"></span>
-            <div>
-                <span id="verification-status"></span>
-                <button id="logout-btn">Log Out</button>
-            </div>
+            <button id="logout-btn">Log Out</button>
         </div>
         <div id="auth-message" class="auth-message"></div>
-        <div class="forgot-password">
-            <a href="#" id="forgot-password-link">Forgot password?</a>
-        </div>
-    </div>
-    
-    <!-- Email verification banner -->
-    <div id="verification-banner" class="verification-banner" style="display: none;">
-        <span id="verification-message">Please verify your email address to fully activate your account.</span>
-        <button id="resend-verification-btn" class="secondary">Resend Verification Email</button>
     </div>
     
     <div class="container" style="display: none;">
@@ -974,758 +996,688 @@
         </div>
     </div>
     
-   <!-- Shopping List Modal -->
-   <div id="ingredients-modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Shopping List</h2>
-            <span class="close">&times;</span>
+    <!-- Shopping List Modal -->
+    <div id="ingredients-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Shopping List</h2>
+                <span class="close">&times;</span>
+            </div>
+            <ul id="shopping-list" class="ingredients-list"></ul>
         </div>
-        <ul id="shopping-list" class="ingredients-list"></ul>
     </div>
-</div>
-
-<!-- Edit Recipe Modal -->
-<div id="edit-modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Edit Recipe</h2>
-            <span class="close-edit">&times;</span>
-        </div>
-        <form id="edit-form">
-            <div class="form-group">
-                <label for="edit-recipe-name">Recipe Name</label>
-                <input type="text" id="edit-recipe-name" placeholder="Enter recipe name" required>
+    
+    <!-- Edit Recipe Modal -->
+    <div id="edit-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Recipe</h2>
+                <span class="close-edit">&times;</span>
             </div>
-            
-            <div class="form-group">
-                <label for="edit-recipe-url">Recipe URL</label>
-                <input type="text" id="edit-recipe-url" placeholder="https://example.com/recipe" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="edit-recipe-tags">Tags (Optional)</label>
-                <div class="tags-input">
-                    <input type="text" id="edit-recipe-tags" placeholder="dinner, quick, healthy, etc.">
-                    <div class="hint">Separate tags with commas</div>
-                </div>
-            </div>
-            
-            <div class="form-group">
-                <label>Ingredients</label>
-                <div class="ingredients-container">
-                    <div class="ingredients-header">
-                        <h3>Recipe Ingredients</h3>
-                    </div>
-                    
-                    <div id="edit-ingredients-list" class="ingredient-list">
-                        <!-- Ingredients will be populated here -->
-                    </div>
-                    
-                    <div class="ingredient-form">
-                        <div class="ingredient-inputs">
-                            <div class="input-group amount">
-                                <label for="edit-ingredient-amount">Amount</label>
-                                <input type="number" id="edit-ingredient-amount" placeholder="2, 0.5, etc." min="0" step="0.25">
-                            </div>
-                            <div class="input-group unit">
-                                <label for="edit-ingredient-unit">Unit</label>
-                                <select id="edit-ingredient-unit">
-                                    <option value="">No unit</option>
-                                    <option value="tsp">teaspoon (tsp)</option>
-                                    <option value="tbsp">tablespoon (tbsp)</option>
-                                    <option value="cup">cup</option>
-                                    <option value="oz">ounce (oz)</option>
-                                    <option value="fl oz">fluid ounce (fl oz)</option>
-                                    <option value="lb">pound (lb)</option>
-                                    <option value="g">gram (g)</option>
-                                    <option value="kg">kilogram (kg)</option>
-                                    <option value="ml">milliliter (ml)</option>
-                                    <option value="l">liter (l)</option>
-                                    <option value="pinch">pinch</option>
-                                    <option value="whole">whole</option>
-                                    <option value="clove">clove</option>
-                                    <option value="slice">slice</option>
-                                    <option value="piece">piece</option>
-                                </select>
-                            </div>
-                            <div class="input-group name">
-                                <label for="edit-ingredient-name">Ingredient</label>
-                                <input type="text" id="edit-ingredient-name" placeholder="e.g., onion, butter, salt">
-                            </div>
-                        </div>
-                        <button type="button" id="edit-add-ingredient-btn" class="secondary">Add Ingredient</button>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="nutrition-section">
-                <div class="nutrition-heading">
-                    <h3>Nutrition Information</h3>
+            <form id="edit-form">
+                <div class="form-group">
+                    <label for="edit-recipe-name">Recipe Name</label>
+                    <input type="text" id="edit-recipe-name" placeholder="Enter recipe name" required>
                 </div>
                 
-                <div class="nutrition-form">
-                    <div class="form-group">
-                        <label for="edit-serving-size">Serving Size</label>
-                        <input type="text" id="edit-serving-size" placeholder="e.g., 1 cup, 2 slices">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="edit-servings">Servings Per Recipe</label>
-                        <input type="number" id="edit-servings" placeholder="e.g., 4, 6, 8" min="1" step="1">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="edit-calories">Calories</label>
-                        <input type="number" id="edit-calories" placeholder="per serving" min="0">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="edit-protein">Protein (g)</label>
-                        <input type="number" id="edit-protein" placeholder="per serving" min="0" step="0.1">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="edit-fat">Fat (g)</label>
-                        <input type="number" id="edit-fat" placeholder="per serving" min="0" step="0.1">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="edit-carbs">Carbs (g)</label>
-                        <input type="number" id="edit-carbs" placeholder="per serving" min="0" step="0.1">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="edit-fiber">Fiber (g)</label>
-                        <input type="number" id="edit-fiber" placeholder="per serving" min="0" step="0.1">
+                <div class="form-group">
+                    <label for="edit-recipe-url">Recipe URL</label>
+                    <input type="text" id="edit-recipe-url" placeholder="https://example.com/recipe" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-recipe-tags">Tags (Optional)</label>
+                    <div class="tags-input">
+                        <input type="text" id="edit-recipe-tags" placeholder="dinner, quick, healthy, etc.">
+                        <div class="hint">Separate tags with commas</div>
                     </div>
                 </div>
+                
+                <div class="form-group">
+                    <label>Ingredients</label>
+                    <div class="ingredients-container">
+                        <div class="ingredients-header">
+                            <h3>Recipe Ingredients</h3>
+                        </div>
+                        
+                        <div id="edit-ingredients-list" class="ingredient-list">
+                            <!-- Ingredients will be populated here -->
+                        </div>
+                        
+                        <div class="ingredient-form">
+                            <div class="ingredient-inputs">
+                                <div class="input-group amount">
+                                    <label for="edit-ingredient-amount">Amount</label>
+                                    <input type="number" id="edit-ingredient-amount" placeholder="2, 0.5, etc." min="0" step="0.25">
+                                </div>
+                                <div class="input-group unit">
+                                    <label for="edit-ingredient-unit">Unit</label>
+                                    <select id="edit-ingredient-unit">
+                                        <option value="">No unit</option>
+                                        <option value="tsp">teaspoon (tsp)</option>
+                                        <option value="tbsp">tablespoon (tbsp)</option>
+                                        <option value="cup">cup</option>
+                                        <option value="oz">ounce (oz)</option>
+                                        <option value="fl oz">fluid ounce (fl oz)</option>
+                                        <option value="lb">pound (lb)</option>
+                                        <option value="g">gram (g)</option>
+                                        <option value="kg">kilogram (kg)</option>
+                                        <option value="ml">milliliter (ml)</option>
+                                        <option value="l">liter (l)</option>
+                                        <option value="pinch">pinch</option>
+                                        <option value="whole">whole</option>
+                                        <option value="clove">clove</option>
+                                        <option value="slice">slice</option>
+                                        <option value="piece">piece</option>
+                                    </select>
+                                </div>
+                                <div class="input-group name">
+                                    <label for="edit-ingredient-name">Ingredient</label>
+                                    <input type="text" id="edit-ingredient-name" placeholder="e.g., onion, butter, salt">
+                                </div>
+                            </div>
+                            <button type="button" id="edit-add-ingredient-btn" class="secondary">Add Ingredient</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="nutrition-section">
+                    <div class="nutrition-heading">
+                        <h3>Nutrition Information</h3>
+                    </div>
+                    
+                    <div class="nutrition-form">
+                        <div class="form-group">
+                            <label for="edit-serving-size">Serving Size</label>
+                            <input type="text" id="edit-serving-size" placeholder="e.g., 1 cup, 2 slices">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-servings">Servings Per Recipe</label>
+                            <input type="number" id="edit-servings" placeholder="e.g., 4, 6, 8" min="1" step="1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-calories">Calories</label>
+                            <input type="number" id="edit-calories" placeholder="per serving" min="0">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-protein">Protein (g)</label>
+                            <input type="number" id="edit-protein" placeholder="per serving" min="0" step="0.1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-fat">Fat (g)</label>
+                            <input type="number" id="edit-fat" placeholder="per serving" min="0" step="0.1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-carbs">Carbs (g)</label>
+                            <input type="number" id="edit-carbs" placeholder="per serving" min="0" step="0.1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-fiber">Fiber (g)</label>
+                            <input type="number" id="edit-fiber" placeholder="per serving" min="0" step="0.1">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="edit-recipe-cost">Recipe Cost</label>
+                    <div class="cost-input">
+                        <span class="currency-symbol">$</span>
+                        <input type="number" id="edit-recipe-cost" placeholder="Total cost" min="0" step="0.01">
+                    </div>
+                </div>
+                
+                <input type="hidden" id="edit-recipe-index">
+                <input type="hidden" id="edit-recipe-image">
+                <button type="submit" id="update-recipe-btn">Save Changes</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Nutrition Modal -->
+    <div id="nutrition-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="nutrition-recipe-name">Nutrition Facts</h2>
+                <span class="close-nutrition">&times;</span>
             </div>
-            
-            <div class="form-group">
-                <label for="edit-recipe-cost">Recipe Cost</label>
-                <div class="cost-input">
-                    <span class="currency-symbol">$</span>
-                    <input type="number" id="edit-recipe-cost" placeholder="Total cost" min="0" step="0.01">
+            <div class="nutrition-label">
+                <h3>Nutrition Facts</h3>
+                <div class="serving">
+                    <div id="serving-size-display">Serving size: 1 cup</div>
+                    <div>Servings per recipe: <span id="servings-per-recipe">4</span></div>
+                </div>
+                <div class="total">Amount Per Serving</div>
+                <div class="main-nutrient">
+                    <strong>Calories</strong> <span class="amount" id="calories-amount">200</span>
+                </div>
+                <div class="main-nutrient">
+                    <strong>Protein</strong> <span class="amount" id="protein-amount">20g</span>
+                </div>
+                <div class="main-nutrient">
+                    <strong>Total Fat</strong> <span class="amount" id="fat-amount">10g</span>
+                </div>
+                <div class="main-nutrient">
+                    <strong>Total Carbohydrates</strong> <span class="amount" id="carbs-amount">25g</span>
+                </div>
+                <div class="sub-nutrient">
+                    Dietary Fiber <span class="amount" id="fiber-amount">5g</span>
                 </div>
             </div>
+        </div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Initialize Firebase with your config
+        const firebaseConfig = {
+            apiKey: "AIzaSyB6ZJzOPKRChSZvnSbbzlKuNHPP9DSPVxY",
+            authDomain: "recipe-collection-9639a.firebaseapp.com",
+            projectId: "recipe-collection-9639a",
+            storageBucket: "recipe-collection-9639a.firebasestorage.app",
+            messagingSenderId: "419770855420",
+            appId: "1:419770855420:web:e886d466cf5f5cb6a80c79"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        // DOM Elements
+        const recipeForm = document.getElementById('recipe-form');
+        const recipeList = document.getElementById('recipe-list');
+        const recipeImage = document.getElementById('recipe-image');
+        const previewImg = document.getElementById('preview-img');
+        const getIngredientsBtn = document.getElementById('get-ingredients-btn');
+        const ingredientsModal = document.getElementById('ingredients-modal');
+        const shoppingList = document.getElementById('shopping-list');
+        const closeModal = document.querySelector('.close');
+        const editModal = document.getElementById('edit-modal');
+        const closeEditModal = document.querySelector('.close-edit');
+        const editForm = document.getElementById('edit-form');
+        const nutritionModal = document.getElementById('nutrition-modal');
+        const closeNutritionModal = document.querySelector('.close-nutrition');
+        const filterTagsContainer = document.getElementById('filter-tags');
+        const clearFiltersBtn = document.getElementById('clear-filters');
+        const authContainer = document.getElementById('auth-container');
+        const mainContainer = document.querySelector('.container');
+        const loginUI = document.getElementById('login-ui');
+        const userUI = document.getElementById('user-ui');
+        const userEmail = document.getElementById('user-email');
+        const emailInput = document.getElementById('email-input');
+        const passwordInput = document.getElementById('password-input');
+        const loginBtn = document.getElementById('login-btn');
+        const signupBtn = document.getElementById('signup-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const googleLoginBtn = document.getElementById('google-login-btn');
+        const authMessage = document.getElementById('auth-message');
+        const addRecipeBtn = document.getElementById('add-recipe-btn');
+        const updateRecipeBtn = document.getElementById('update-recipe-btn');
+        
+        // Fixed: Changed from const to let to avoid variable shadowing in updateTotalCost
+        let totalCostElement = document.getElementById('total-cost');
+        
+        // Ingredients elements
+        const ingredientsList = document.getElementById('ingredients-list');
+        const ingredientAmount = document.getElementById('ingredient-amount');
+        const ingredientUnit = document.getElementById('ingredient-unit');
+        const ingredientName = document.getElementById('ingredient-name');
+        const addIngredientBtn = document.getElementById('add-ingredient-btn');
+        
+        // Edit ingredients elements
+        const editIngredientsList = document.getElementById('edit-ingredients-list');
+        const editIngredientAmount = document.getElementById('edit-ingredient-amount');
+        const editIngredientUnit = document.getElementById('edit-ingredient-unit');
+        const editIngredientName = document.getElementById('edit-ingredient-name');
+        const editAddIngredientBtn = document.getElementById('edit-add-ingredient-btn');
+        
+        // Tag elements
+        const recipeTags = document.getElementById('recipe-tags');
+        const editRecipeTags = document.getElementById('edit-recipe-tags');
+        
+        // Current user
+        let currentUser = null;
+        
+        // Recipes data
+        let recipes = [];
+        
+        // Current recipe ingredients
+        let currentIngredients = [];
+        
+        // Edit recipe ingredients
+        let editIngredients = [];
+        
+        // Active filters
+        let activeFilters = [];
+
+        // Show loading state on button
+        function setButtonLoading(button, isLoading) {
+            if (isLoading) {
+                const originalText = button.textContent;
+                button.setAttribute('data-original-text', originalText);
+                button.innerHTML = `<div class="btn-loader"><span class="loading-spinner"></span>Loading...</div>`;
+                button.disabled = true;
+            } else {
+                const originalText = button.getAttribute('data-original-text') || 'Button';
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+        
+        // Show auth message
+        function showAuthMessage(message, isError = false) {
+            authMessage.textContent = message;
+            authMessage.style.color = isError ? 'red' : 'green';
             
-            <input type="hidden" id="edit-recipe-index">
-            <input type="hidden" id="edit-recipe-image">
-            <button type="submit" id="update-recipe-btn">Save Changes</button>
-        </form>
-    </div>
-</div>
-
-<!-- Nutrition Modal -->
-<div id="nutrition-modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="nutrition-recipe-name">Nutrition Facts</h2>
-            <span class="close-nutrition">&times;</span>
-        </div>
-        <div class="nutrition-label">
-            <h3>Nutrition Facts</h3>
-            <div class="serving">
-                <div id="serving-size-display">Serving size: 1 cup</div>
-                <div>Servings per recipe: <span id="servings-per-recipe">4</span></div>
-            </div>
-            <div class="total">Amount Per Serving</div>
-            <div class="main-nutrient">
-                <strong>Calories</strong> <span class="amount" id="calories-amount">200</span>
-            </div>
-            <div class="main-nutrient">
-                <strong>Protein</strong> <span class="amount" id="protein-amount">20g</span>
-            </div>
-            <div class="main-nutrient">
-                <strong>Total Fat</strong> <span class="amount" id="fat-amount">10g</span>
-            </div>
-            <div class="main-nutrient">
-                <strong>Total Carbohydrates</strong> <span class="amount" id="carbs-amount">25g</span>
-            </div>
-            <div class="sub-nutrient">
-                Dietary Fiber <span class="amount" id="fiber-amount">5g</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Password Reset Modal -->
-<div id="password-reset-modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Reset Password</h2>
-            <span class="close-password-reset">&times;</span>
-        </div>
-        <div class="form-group">
-            <label for="reset-email">Enter your email address</label>
-            <input type="email" id="reset-email" placeholder="Your email address">
-        </div>
-        <button id="send-reset-btn">Send Reset Email</button>
-        <div id="reset-message" class="auth-message" style="margin-top: 15px;"></div>
-    </div>
-</div>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
-
-<script>
-    // Initialize Firebase with your config
-    const firebaseConfig = {
-        apiKey: "AIzaSyB6ZJzOPKRChSZvnSbbzlKuNHPP9DSPVxY",
-        authDomain: "recipe-collection-9639a.firebaseapp.com",
-        projectId: "recipe-collection-9639a",
-        storageBucket: "recipe-collection-9639a.firebasestorage.app",
-        messagingSenderId: "419770855420",
-        appId: "1:419770855420:web:e886d466cf5f5cb6a80c79"
-    };
-    
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
-    
-    // DOM Elements
-    const recipeForm = document.getElementById('recipe-form');
-    const recipeList = document.getElementById('recipe-list');
-    const recipeImage = document.getElementById('recipe-image');
-    const previewImg = document.getElementById('preview-img');
-    const getIngredientsBtn = document.getElementById('get-ingredients-btn');
-    const ingredientsModal = document.getElementById('ingredients-modal');
-    const shoppingList = document.getElementById('shopping-list');
-    const closeModal = document.querySelector('.close');
-    const editModal = document.getElementById('edit-modal');
-    const closeEditModal = document.querySelector('.close-edit');
-    const editForm = document.getElementById('edit-form');
-    const nutritionModal = document.getElementById('nutrition-modal');
-    const closeNutritionModal = document.querySelector('.close-nutrition');
-    const filterTagsContainer = document.getElementById('filter-tags');
-    const clearFiltersBtn = document.getElementById('clear-filters');
-    const authContainer = document.getElementById('auth-container');
-    const mainContainer = document.querySelector('.container');
-    const loginUI = document.getElementById('login-ui');
-    const userUI = document.getElementById('user-ui');
-    const userEmail = document.getElementById('user-email');
-    const emailInput = document.getElementById('email-input');
-    const passwordInput = document.getElementById('password-input');
-    const loginBtn = document.getElementById('login-btn');
-    const signupBtn = document.getElementById('signup-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const authMessage = document.getElementById('auth-message');
-    const addRecipeBtn = document.getElementById('add-recipe-btn');
-    const updateRecipeBtn = document.getElementById('update-recipe-btn');
-    const forgotPasswordLink = document.getElementById('forgot-password-link');
-    const passwordResetModal = document.getElementById('password-reset-modal');
-    const closePasswordResetModal = document.querySelector('.close-password-reset');
-    const resetEmailInput = document.getElementById('reset-email');
-    const sendResetBtn = document.getElementById('send-reset-btn');
-    const resetMessage = document.getElementById('reset-message');
-    const verificationBanner = document.getElementById('verification-banner');
-    const verificationMessage = document.getElementById('verification-message');
-    const resendVerificationBtn = document.getElementById('resend-verification-btn');
-    const verificationStatus = document.getElementById('verification-status');
-    
-    // Fixed: Changed from const to let to avoid variable shadowing in updateTotalCost
-    let totalCostElement = document.getElementById('total-cost');
-    
-    // Ingredients elements
-    const ingredientsList = document.getElementById('ingredients-list');
-    const ingredientAmount = document.getElementById('ingredient-amount');
-    const ingredientUnit = document.getElementById('ingredient-unit');
-    const ingredientName = document.getElementById('ingredient-name');
-    const addIngredientBtn = document.getElementById('add-ingredient-btn');
-    
-    // Edit ingredients elements
-    const editIngredientsList = document.getElementById('edit-ingredients-list');
-    const editIngredientAmount = document.getElementById('edit-ingredient-amount');
-    const editIngredientUnit = document.getElementById('edit-ingredient-unit');
-    const editIngredientName = document.getElementById('edit-ingredient-name');
-    const editAddIngredientBtn = document.getElementById('edit-add-ingredient-btn');
-    
-    // Tag elements
-    const recipeTags = document.getElementById('recipe-tags');
-    const editRecipeTags = document.getElementById('edit-recipe-tags');
-    
-    // Current user
-    let currentUser = null;
-    
-    // Recipes data
-    let recipes = [];
-    
-    // Current recipe ingredients
-    let currentIngredients = [];
-    
-    // Edit recipe ingredients
-    let editIngredients = [];
-    
-    // Active filters
-    let activeFilters = [];
-
-    // Show loading state on button
-    function setButtonLoading(button, isLoading) {
-        if (isLoading) {
-            const originalText = button.textContent;
-            button.setAttribute('data-original-text', originalText);
-            button.innerHTML = `<div class="btn-loader"><span class="loading-spinner"></span>Loading...</div>`;
-            button.disabled = true;
-        } else {
-            const originalText = button.getAttribute('data-original-text') || 'Button';
-            button.innerHTML = originalText;
-            button.disabled = false;
-        }
-    }
-    
-    // Show auth message
-    function showAuthMessage(message, isError = false) {
-        authMessage.textContent = message;
-        authMessage.style.color = isError ? 'red' : 'green';
-        
-        // Clear message after 5 seconds
-        setTimeout(() => {
-            authMessage.textContent = '';
-        }, 5000);
-    }
-    
-    // Show reset message
-    function showResetMessage(message, isError = false) {
-        resetMessage.textContent = message;
-        resetMessage.style.color = isError ? 'red' : 'green';
-        
-        // Clear message after 5 seconds
-        setTimeout(() => {
-            resetMessage.textContent = '';
-        }, 5000);
-    }
-    
-    // Load recipes from Firestore
-    async function loadRecipes() {
-        if (!currentUser) {
-            recipes = [];
-            return;
+            // Clear message after 5 seconds
+            setTimeout(() => {
+                authMessage.textContent = '';
+            }, 5000);
         }
         
-        try {
-            const snapshot = await db.collection('users').doc(currentUser.uid).collection('recipes').get();
-            recipes = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
+        // Load recipes from Firestore
+        async function loadRecipes() {
+            if (!currentUser) {
+                recipes = [];
+                return;
+            }
+            
+            try {
+                const snapshot = await db.collection('users').doc(currentUser.uid).collection('recipes').get();
+                recipes = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                displayFilterTags();
+                displayRecipes();
+                updateTotalCost();
+            } catch (error) {
+                console.error("Error loading recipes:", error);
+                recipes = [];
+            }
+        }
+        
+        // Save recipe to Firestore
+        async function saveRecipe(recipe) {
+            if (!currentUser) {
+                showAuthMessage("You must be logged in to save recipes", true);
+                return false;
+            }
+            
+            try {
+                const docRef = await db.collection('users').doc(currentUser.uid).collection('recipes').add(recipe);
+                return docRef.id;
+            } catch (error) {
+                console.error("Error saving recipe:", error);
+                showAuthMessage("Error saving recipe. Please try again.", true);
+                return false;
+            }
+        }
+        
+        // Update recipe in Firestore
+        async function updateRecipe(recipeId, recipe) {
+            if (!currentUser) {
+                showAuthMessage("You must be logged in to update recipes", true);
+                return false;
+            }
+            
+            try {
+                await db.collection('users').doc(currentUser.uid).collection('recipes').doc(recipeId).update(recipe);
+                return true;
+            } catch (error) {
+                console.error("Error updating recipe:", error);
+                showAuthMessage("Error updating recipe. Please try again.", true);
+                return false;
+            }
+        }
+        
+        // Delete recipe from Firestore
+        async function deleteRecipeFromDB(recipeId) {
+            if (!currentUser) {
+                showAuthMessage("You must be logged in to delete recipes", true);
+                return false;
+            }
+            
+            try {
+                await db.collection('users').doc(currentUser.uid).collection('recipes').doc(recipeId).delete();
+                return true;
+            } catch (error) {
+                console.error("Error deleting recipe:", error);
+                showAuthMessage("Error deleting recipe. Please try again.", true);
+                return false;
+            }
+        }
+        
+        // Process tags from string
+        function processTags(tagsString) {
+            if (!tagsString) return [];
+            
+            return tagsString.split(',')
+                .map(tag => tag.trim().toLowerCase())
+                .filter(tag => tag !== '')
+                .filter((tag, index, self) => self.indexOf(tag) === index); // Remove duplicates
+        }
+        
+        // Get all unique tags from recipes
+        function getAllTags() {
+            const allTags = new Set();
+            
+            recipes.forEach(recipe => {
+                if (recipe.tags && Array.isArray(recipe.tags)) {
+                    recipe.tags.forEach(tag => allTags.add(tag));
+                }
+            });
+            
+            return Array.from(allTags).sort();
+        }
+        
+        // Display filter tags
+        function displayFilterTags() {
+            const allTags = getAllTags();
+            
+            if (allTags.length === 0) {
+                filterTagsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <small>No tags available yet</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            filterTagsContainer.innerHTML = '';
+            
+            allTags.forEach(tag => {
+                const tagElement = document.createElement('div');
+                tagElement.className = `filter-tag ${activeFilters.includes(tag) ? 'active' : ''}`;
+                tagElement.dataset.tag = tag;
+                tagElement.textContent = tag;
+                
+                tagElement.addEventListener('click', function() {
+                    toggleFilter(tag);
+                });
+                
+                filterTagsContainer.appendChild(tagElement);
+            });
+        }
+        
+        // Toggle filter
+        function toggleFilter(tag) {
+            const index = activeFilters.indexOf(tag);
+            
+            if (index === -1) {
+                activeFilters.push(tag);
+            } else {
+                activeFilters.splice(index, 1);
+            }
             
             displayFilterTags();
             displayRecipes();
-            updateTotalCost();
-        } catch (error) {
-            console.error("Error loading recipes:", error);
-            recipes = [];
-        }
-    }
-    
-    // Save recipe to Firestore
-    async function saveRecipe(recipe) {
-        if (!currentUser) {
-            showAuthMessage("You must be logged in to save recipes", true);
-            return false;
         }
         
-        try {
-            const docRef = await db.collection('users').doc(currentUser.uid).collection('recipes').add(recipe);
-            return docRef.id;
-        } catch (error) {
-            console.error("Error saving recipe:", error);
-            showAuthMessage("Error saving recipe. Please try again.", true);
-            return false;
-        }
-    }
-    
-    // Update recipe in Firestore
-    async function updateRecipe(recipeId, recipe) {
-        if (!currentUser) {
-            showAuthMessage("You must be logged in to update recipes", true);
-            return false;
-        }
-        
-        try {
-            await db.collection('users').doc(currentUser.uid).collection('recipes').doc(recipeId).update(recipe);
-            return true;
-        } catch (error) {
-            console.error("Error updating recipe:", error);
-            showAuthMessage("Error updating recipe. Please try again.", true);
-            return false;
-        }
-    }
-    
-    // Delete recipe from Firestore
-    async function deleteRecipeFromDB(recipeId) {
-        if (!currentUser) {
-            showAuthMessage("You must be logged in to delete recipes", true);
-            return false;
-        }
-        
-        try {
-            await db.collection('users').doc(currentUser.uid).collection('recipes').doc(recipeId).delete();
-            return true;
-        } catch (error) {
-            console.error("Error deleting recipe:", error);
-            showAuthMessage("Error deleting recipe. Please try again.", true);
-            return false;
-        }
-    }
-    
-    // Send verification email
-    async function sendVerificationEmail() {
-        if (!currentUser) return;
-        
-        try {
-            setButtonLoading(resendVerificationBtn, true);
-            await currentUser.sendEmailVerification();
-            showAuthMessage("Verification email sent! Check your inbox.");
-        } catch (error) {
-            console.error("Error sending verification email:", error);
-            showAuthMessage("Error sending verification email. Please try again.", true);
-        } finally {
-            setButtonLoading(resendVerificationBtn, false);
-        }
-    }
-    
-    // Update verification UI
-    function updateVerificationUI() {
-        if (!currentUser) {
-            verificationBanner.style.display = 'none';
-            return;
-        }
-        
-        if (currentUser.emailVerified) {
-            verificationBanner.style.display = 'none';
-            verificationStatus.textContent = "✓ Email verified";
-            verificationStatus.style.color = "green";
-        } else {
-            verificationBanner.style.display = 'flex';
-            verificationStatus.textContent = "! Email not verified";
-            verificationStatus.style.color = "orange";
-        }
-    }
-    
-    // Process tags from string
-    function processTags(tagsString) {
-        if (!tagsString) return [];
-        
-        return tagsString.split(',')
-            .map(tag => tag.trim().toLowerCase())
-            .filter(tag => tag !== '')
-            .filter((tag, index, self) => self.indexOf(tag) === index); // Remove duplicates
-    }
-    
-    // Get all unique tags from recipes
-    function getAllTags() {
-        const allTags = new Set();
-        
-        recipes.forEach(recipe => {
-            if (recipe.tags && Array.isArray(recipe.tags)) {
-                recipe.tags.forEach(tag => allTags.add(tag));
-            }
+        // Clear all filters
+        clearFiltersBtn.addEventListener('click', function() {
+            activeFilters = [];
+            displayFilterTags();
+            displayRecipes();
         });
         
-        return Array.from(allTags).sort();
-    }
-    
-    // Display filter tags
-    function displayFilterTags() {
-        const allTags = getAllTags();
-        
-        if (allTags.length === 0) {
-            filterTagsContainer.innerHTML = `
-                <div class="empty-state">
-                    <small>No tags available yet</small>
-                </div>
-            `;
-            return;
-        }
-        
-        filterTagsContainer.innerHTML = '';
-        
-        allTags.forEach(tag => {
-            const tagElement = document.createElement('div');
-            tagElement.className = `filter-tag ${activeFilters.includes(tag) ? 'active' : ''}`;
-            tagElement.dataset.tag = tag;
-            tagElement.textContent = tag;
+        // Display the recipes
+        function displayRecipes() {
+            let filteredRecipes = recipes;
             
-            tagElement.addEventListener('click', function() {
-                toggleFilter(tag);
-            });
-            
-            filterTagsContainer.appendChild(tagElement);
-        });
-    }
-    
-    // Toggle filter
-    function toggleFilter(tag) {
-        const index = activeFilters.indexOf(tag);
-        
-        if (index === -1) {
-            activeFilters.push(tag);
-        } else {
-            activeFilters.splice(index, 1);
-        }
-        
-        displayFilterTags();
-        displayRecipes();
-    }
-    
-    // Clear all filters
-    clearFiltersBtn.addEventListener('click', function() {
-        activeFilters = [];
-        displayFilterTags();
-        displayRecipes();
-    });
-    
-    // Display the recipes
-    function displayRecipes() {
-        let filteredRecipes = recipes;
-        
-        // Apply filters if any
-        if (activeFilters.length > 0) {
-            filteredRecipes = recipes.filter(recipe => {
-                if (!recipe.tags || !Array.isArray(recipe.tags)) return false;
-                
-                // Check if recipe has at least one of the active filters
-                return activeFilters.some(filter => recipe.tags.includes(filter));
-            });
-        }
-        
-        if (filteredRecipes.length === 0) {
-            recipeList.innerHTML = `
-                <div class="empty-state">
-                    ${activeFilters.length > 0 
-                        ? `<p>No recipes match the selected filters. <br>Try different filters or <a href="#" id="clear-filters-link">clear all filters</a>.</p>`
-                        : `<i>📋</i><p>Your recipe collection is empty. Add your first recipe!</p>`
-                    }
-                </div>
-            `;
-            
-            // Add event listener to clear filters link
-            const clearFiltersLink = document.getElementById('clear-filters-link');
-            if (clearFiltersLink) {
-                clearFiltersLink.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    activeFilters = [];
-                    displayFilterTags();
-                    displayRecipes();
+            // Apply filters if any
+            if (activeFilters.length > 0) {
+                filteredRecipes = recipes.filter(recipe => {
+                    if (!recipe.tags || !Array.isArray(recipe.tags)) return false;
+                    
+                    // Check if recipe has at least one of the active filters
+                    return activeFilters.some(filter => recipe.tags.includes(filter));
                 });
             }
             
-            return;
-        }
-        
-        recipeList.innerHTML = '';
-        
-        filteredRecipes.forEach((recipe) => {
-            const recipeCard = document.createElement('div');
-            recipeCard.className = 'recipe-card';
-            
-            // Format cost with dollar sign and two decimal places
-            let costDisplay = '';
-            if (recipe.cost) {
-                costDisplay = `<p class="recipe-price">$${parseFloat(recipe.cost).toFixed(2)}</p>`;
-            }
-            
-            // Format tags if any
-            let tagsDisplay = '';
-            if (recipe.tags && recipe.tags.length > 0) {
-                tagsDisplay = `
-                    <div class="tags-container">
-                        ${recipe.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+            if (filteredRecipes.length === 0) {
+                recipeList.innerHTML = `
+                    <div class="empty-state">
+                        ${activeFilters.length > 0 
+                            ? `<p>No recipes match the selected filters. <br>Try different filters or <a href="#" id="clear-filters-link">clear all filters</a>.</p>`
+                            : `<i>📋</i><p>Your recipe collection is empty. Add your first recipe!</p>`
+                        }
                     </div>
                 `;
+                
+                // Add event listener to clear filters link
+                const clearFiltersLink = document.getElementById('clear-filters-link');
+                if (clearFiltersLink) {
+                    clearFiltersLink.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        activeFilters = [];
+                        displayFilterTags();
+                        displayRecipes();
+                    });
+                }
+                
+                return;
             }
             
-            recipeCard.innerHTML = `
-                <div class="recipe-image" style="background-image: url(${recipe.image})"></div>
-                <div class="recipe-details">
-                    <div class="recipe-actions">
-                        <button class="btn-icon btn-nutrition" data-id="${recipe.id}" title="View nutrition info">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"></path>
-                            </svg>
-                        </button>
-                        <button class="btn-icon btn-edit" data-id="${recipe.id}" title="Edit recipe">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
-                                <path d="m15 5 4 4"></path>
-                            </svg>
-                        </button>
-                        <button class="btn-icon btn-delete" data-id="${recipe.id}" title="Delete recipe">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 6h18"></path>
-                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                            </svg>
-                        </button>
+            recipeList.innerHTML = '';
+            
+            filteredRecipes.forEach((recipe) => {
+                const recipeCard = document.createElement('div');
+                recipeCard.className = 'recipe-card';
+                
+                // Format cost with dollar sign and two decimal places
+                let costDisplay = '';
+                if (recipe.cost) {
+                    costDisplay = `<p class="recipe-price">$${parseFloat(recipe.cost).toFixed(2)}</p>`;
+                }
+                
+                // Format tags if any
+                let tagsDisplay = '';
+                if (recipe.tags && recipe.tags.length > 0) {
+                    tagsDisplay = `
+                        <div class="tags-container">
+                            ${recipe.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        </div>
+                    `;
+                }
+                
+                recipeCard.innerHTML = `
+                    <div class="recipe-image" style="background-image: url(${recipe.image})"></div>
+                    <div class="recipe-details">
+                        <div class="recipe-actions">
+                            <button class="btn-icon btn-nutrition" data-id="${recipe.id}" title="View nutrition info">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"></path>
+                                </svg>
+                            </button>
+                            <button class="btn-icon btn-edit" data-id="${recipe.id}" title="Edit recipe">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
+                                    <path d="m15 5 4 4"></path>
+                                </svg>
+                            </button>
+                            <button class="btn-icon btn-delete" data-id="${recipe.id}" title="Delete recipe">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <h3>${recipe.name}</h3>
+                        <a href="${recipe.url}" target="_blank" class="recipe-url">${recipe.url}</a>
+                        <p>${recipe.ingredients.length} ingredients</p>
+                        ${costDisplay}
+                        ${tagsDisplay}
+                        <input type="checkbox" class="recipe-checkbox" data-id="${recipe.id}">
                     </div>
-                    <h3>${recipe.name}</h3>
-                    <a href="${recipe.url}" target="_blank" class="recipe-url">${recipe.url}</a>
-                    <p>${recipe.ingredients.length} ingredients</p>
-                    ${costDisplay}
-                    ${tagsDisplay}
-                    <input type="checkbox" class="recipe-checkbox" data-id="${recipe.id}">
-                </div>
-            `;
+                `;
+                
+                recipeList.appendChild(recipeCard);
+            });
             
-            recipeList.appendChild(recipeCard);
-        });
-        
-        // Add event listeners to buttons
-        document.querySelectorAll('.btn-edit').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const recipeId = this.dataset.id;
-                openEditModal(recipeId);
+            // Add event listeners to buttons
+            document.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const recipeId = this.dataset.id;
+                    openEditModal(recipeId);
+                });
             });
-        });
-        
-        document.querySelectorAll('.btn-delete').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const recipeId = this.dataset.id;
-                deleteRecipe(recipeId);
+            
+            document.querySelectorAll('.btn-delete').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const recipeId = this.dataset.id;
+                    deleteRecipe(recipeId);
+                });
             });
-        });
-        
-        document.querySelectorAll('.btn-nutrition').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const recipeId = this.dataset.id;
-                openNutritionModal(recipeId);
+            
+            document.querySelectorAll('.btn-nutrition').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const recipeId = this.dataset.id;
+                    openNutritionModal(recipeId);
+                });
             });
-        });
-    }
-    
-    // Display current ingredients
-    function displayIngredients() {
-        if (currentIngredients.length === 0) {
-            ingredientsList.innerHTML = `
-                <div class="empty-state">
-                    <p>No ingredients added yet</p>
-                </div>
-            `;
-            return;
         }
         
-        ingredientsList.innerHTML = '';
-        
-        currentIngredients.forEach((ingredient, index) => {
-            const item = document.createElement('div');
-            item.className = 'ingredient-item';
-            
-            let displayText = '';
-            
-            if (ingredient.amount) {
-                displayText += `${ingredient.amount} `;
+        // Display current ingredients
+        function displayIngredients() {
+            if (currentIngredients.length === 0) {
+                ingredientsList.innerHTML = `
+                    <div class="empty-state">
+                        <p>No ingredients added yet</p>
+                    </div>
+                `;
+                return;
             }
             
-            if (ingredient.unit) {
-                displayText += `${ingredient.unit} `;
-            }
+            ingredientsList.innerHTML = '';
             
-            displayText += ingredient.name;
-            
-            item.innerHTML = `
-                <span>${displayText}</span>
-                <button class="delete-ingredient-btn" data-index="${index}">×</button>
-            `;
-            
-            ingredientsList.appendChild(item);
-        });
-        
-        // Add event listeners to delete buttons
-        document.querySelectorAll('.delete-ingredient-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const index = parseInt(this.dataset.index);
-                currentIngredients.splice(index, 1);
-                displayIngredients();
+            currentIngredients.forEach((ingredient, index) => {
+                const item = document.createElement('div');
+                item.className = 'ingredient-item';
+                
+                let displayText = '';
+                
+                if (ingredient.amount) {
+                    displayText += `${ingredient.amount} `;
+                }
+                
+                if (ingredient.unit) {
+                    displayText += `${ingredient.unit} `;
+                }
+                
+                displayText += ingredient.name;
+                
+                item.innerHTML = `
+                    <span>${displayText}</span>
+                    <button class="delete-ingredient-btn" data-index="${index}">×</button>
+                `;
+                
+                ingredientsList.appendChild(item);
             });
-        });
-    }
-    
-    // Display edit ingredients
-    function displayEditIngredients() {
-        if (editIngredients.length === 0) {
-            editIngredientsList.innerHTML = `
-                <div class="empty-state">
-                    <p>No ingredients added yet</p>
-                </div>
-            `;
-            return;
-        }
-        
-        editIngredientsList.innerHTML = '';
-        
-        editIngredients.forEach((ingredient, index) => {
-            const item = document.createElement('div');
-            item.className = 'ingredient-item';
             
-            let displayText = '';
-            
-            if (ingredient.amount) {
-                displayText += `${ingredient.amount} `;
-            }
-            
-            if (ingredient.unit) {
-                displayText += `${ingredient.unit} `;
-            }
-            
-            displayText += ingredient.name;
-            
-            item.innerHTML = `
-                <span>${displayText}</span>
-                <button class="delete-ingredient-btn" data-index="${index}">×</button>
-            `;
-            
-            editIngredientsList.appendChild(item);
-        });
-        
-        // Add event listeners to delete buttons
-        editIngredientsList.querySelectorAll('.delete-ingredient-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const index = parseInt(this.dataset.index);
-                editIngredients.splice(index, 1);
-                displayEditIngredients();
+            // Add event listeners to delete buttons
+            document.querySelectorAll('.delete-ingredient-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const index = parseInt(this.dataset.index);
+                    currentIngredients.splice(index, 1);
+                    displayIngredients();
+                });
             });
-        });
-    }
-    
-    // Helper function to pluralize ingredients
-    function pluralize(count, word, unit) {
-        // Don't pluralize units
-        if (unit) return word;
-        
-        // Special cases
-        if (word === 'leaf') return count > 1 ? 'leaves' : 'leaf';
-        if (word === 'loaf') return count > 1 ? 'loaves' : 'loaf';
-        
-        // Regular plurals
-        if (count === 1) return word;
-        
-        // Words ending in 'y' (e.g., berry -> berries)
-        if (word.endsWith('y') && !['a', 'e', 'i', 'o', 'u'].includes(word[word.length - 2])) {
-            return word.slice(0, -1) + 'ies';
         }
         
-        // Common ending plurals
-        if (word.endsWith('ch') || word.endsWith('sh') || word.endsWith('s') || 
-            word.endsWith('x') || word.endsWith('z')) {
-            return word + 'es';
+        // Display edit ingredients
+        function displayEditIngredients() {
+            if (editIngredients.length === 0) {
+                editIngredientsList.innerHTML = `
+                    <div class="empty-state">
+                        <p>No ingredients added yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            editIngredientsList.innerHTML = '';
+            
+            editIngredients.forEach((ingredient, index) => {
+                const item = document.createElement('div');
+                item.className = 'ingredient-item';
+                
+                let displayText = '';
+                
+                if (ingredient.amount) {
+                    displayText += `${ingredient.amount} `;
+                }
+                
+                if (ingredient.unit) {
+                    displayText += `${ingredient.unit} `;
+                }
+                
+                displayText += ingredient.name;
+                
+                item.innerHTML = `
+                    <span>${displayText}</span>
+                    <button class="delete-ingredient-btn" data-index="${index}">×</button>
+                `;
+                
+                editIngredientsList.appendChild(item);
+            });
+            
+            // Add event listeners to delete buttons
+            editIngredientsList.querySelectorAll('.delete-ingredient-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const index = parseInt(this.dataset.index);
+                    editIngredients.splice(index, 1);
+                    displayEditIngredients();
+                });
+            });
         }
         
-        // Regular ending
-        return word + 's';
-    }
-    
-    // Find recipe by ID
-    function findRecipeById(recipeId) {
-        return recipes.find(recipe => recipe.id === recipeId);
-    }
-    
-    // Open edit modal
-    function openEditModal(recipeId) {
+        // Helper function to pluralize ingredients
+        function pluralize(count, word, unit) {
+            // Don't pluralize units
+            if (unit) return word;
+            
+            // Special cases
+            if (word === 'leaf') return count > 1 ? 'leaves' : 'leaf';
+            if (word === 'loaf') return count > 1 ? 'loaves' : 'loaf';
+            
+            // Regular plurals
+            if (count === 1) return word;
+            
+            // Words ending in 'y' (e.g., berry -> berries)
+            if (word.endsWith('y') && !['a', 'e', 'i', 'o', 'u'].includes(word[word.length - 2])) {
+                return word.slice(0, -1) + 'ies';
+            }
+            
+            // Common ending plurals
+            if (word.endsWith('ch') || word.endsWith('sh') || word.endsWith('s') || 
+                word.endsWith('x') || word.endsWith('z')) {
+                return word + 'es';
+            }
+            
+            // Regular ending
+            return word + 's';
+        }
+        
+        // Find recipe by ID
+        function findRecipeById(recipeId) {
+            return recipes.find(recipe => recipe.id === recipeId);
+        }
+        
+        // Open edit modal
+        function openEditModal(recipeId) {
             const recipe = findRecipeById(recipeId);
             if (!recipe) return;
             
@@ -1781,8 +1733,8 @@
                 document.getElementById('carbs-amount').textContent = recipe.nutrition.carbs ? recipe.nutrition.carbs + 'g' : '-';
                 document.getElementById('fiber-amount').textContent = recipe.nutrition.fiber ? recipe.nutrition.fiber + 'g' : '-';
             } else {
-                // If no nutrition info is available
-                document.getElementById('serving-size-display').textContent = 'Serving size: Not specified';
+              // If no nutrition info is available
+              document.getElementById('serving-size-display').textContent = 'Serving size: Not specified';
                 document.getElementById('servings-per-recipe').textContent = 'Not specified';
                 document.getElementById('calories-amount').textContent = '-';
                 document.getElementById('protein-amount').textContent = '-';
@@ -2149,45 +2101,6 @@
             ingredientsModal.style.display = 'block';
         });
         
-        // Password reset functionality
-        forgotPasswordLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // Pre-fill with current email if signed in
-            if (emailInput.value) {
-                resetEmailInput.value = emailInput.value;
-            }
-            
-            passwordResetModal.style.display = 'block';
-        });
-        
-        // Send password reset email
-        sendResetBtn.addEventListener('click', async function() {
-            const email = resetEmailInput.value.trim();
-            
-            if (!email) {
-                showResetMessage("Please enter your email address", true);
-                return;
-            }
-            
-            setButtonLoading(sendResetBtn, true);
-            
-            try {
-                await auth.sendPasswordResetEmail(email);
-                showResetMessage("Password reset email sent! Check your inbox.");
-                
-                // Close modal after 3 seconds
-                setTimeout(() => {
-                    passwordResetModal.style.display = 'none';
-                }, 3000);
-            } catch (error) {
-                console.error("Error sending password reset email:", error);
-                showResetMessage(error.message, true);
-            } finally {
-                setButtonLoading(sendResetBtn, false);
-            }
-        });
-        
         // Close modals
         closeModal.addEventListener('click', function() {
             ingredientsModal.style.display = 'none';
@@ -2201,12 +2114,6 @@
             nutritionModal.style.display = 'none';
         });
         
-        closePasswordResetModal.addEventListener('click', function() {
-            passwordResetModal.style.display = 'none';
-            resetEmailInput.value = '';
-            resetMessage.textContent = '';
-        });
-        
         // Close modals when clicking outside
         window.addEventListener('click', function(e) {
             if (e.target === ingredientsModal) {
@@ -2217,11 +2124,6 @@
             }
             if (e.target === nutritionModal) {
                 nutritionModal.style.display = 'none';
-            }
-            if (e.target === passwordResetModal) {
-                passwordResetModal.style.display = 'none';
-                resetEmailInput.value = '';
-                resetMessage.textContent = '';
             }
         });
         
@@ -2249,6 +2151,9 @@
             }
         });
         
+        // Google sign-in provider
+        const googleProvider = new firebase.auth.GoogleAuthProvider();
+        
         // Sign up with email and password
         signupBtn.addEventListener('click', async function() {
             const email = emailInput.value.trim();
@@ -2262,9 +2167,8 @@
             setButtonLoading(signupBtn, true);
             
             try {
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                await userCredential.user.sendEmailVerification();
-                showAuthMessage("Account created successfully! Verification email sent.");
+                await auth.createUserWithEmailAndPassword(email, password);
+                showAuthMessage("Account created successfully!");
             } catch (error) {
                 console.error("Error creating account:", error);
                 showAuthMessage(error.message, true);
@@ -2296,6 +2200,21 @@
             }
         });
         
+        // Google sign in
+        googleLoginBtn.addEventListener('click', async function() {
+            setButtonLoading(googleLoginBtn, true);
+            
+            try {
+                await auth.signInWithPopup(googleProvider);
+                showAuthMessage("Logged in with Google successfully!");
+            } catch (error) {
+                console.error("Error signing in with Google:", error);
+                showAuthMessage(error.message, true);
+            } finally {
+                setButtonLoading(googleLoginBtn, false);
+            }
+        });
+        
         // Logout
         logoutBtn.addEventListener('click', async function() {
             try {
@@ -2307,24 +2226,15 @@
             }
         });
         
-        // Resend verification email
-        resendVerificationBtn.addEventListener('click', sendVerificationEmail);
-        
         // Auth state change listener
         auth.onAuthStateChanged(async function(user) {
             if (user) {
-                // Force refresh user to get the latest email verification status
-                await user.reload();
-                
                 // User is signed in
                 currentUser = user;
-                userEmail.textContent = user.email;
+                userEmail.textContent = user.email || user.displayName || "User";
                 loginUI.style.display = 'none';
                 userUI.style.display = 'flex';
                 mainContainer.style.display = 'grid';
-                
-                // Update verification UI
-                updateVerificationUI();
                 
                 // Load user's recipes
                 await loadRecipes();
@@ -2334,7 +2244,6 @@
                 loginUI.style.display = 'flex';
                 userUI.style.display = 'none';
                 mainContainer.style.display = 'none';
-                verificationBanner.style.display = 'none';
                 recipes = [];
             }
         });
