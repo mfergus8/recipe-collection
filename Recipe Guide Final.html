@@ -70,6 +70,8 @@
         }
         
         input[type="text"],
+        input[type="email"],
+        input[type="password"],
         textarea,
         select {
             width: 100%;
@@ -665,12 +667,89 @@
             flex-direction: column;
             overflow: hidden;
         }
+
+        /* Auth UI Styles */
+        #auth-container {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        #login-ui {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        #login-ui input {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            min-width: 200px;
+        }
+
+        #login-ui button, #user-ui button {
+            width: auto;
+            min-width: 100px;
+        }
+
+        #user-ui {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .auth-message {
+            margin-top: 10px;
+            color: var(--primary-color);
+            font-size: 14px;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 5px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .btn-loader {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
 </head>
 <body>
     <h1>My Recipe Collection</h1>
+
+    <!-- Auth UI -->
+    <div id="auth-container">
+        <div id="login-ui">
+            <input type="email" id="email-input" placeholder="Email">
+            <input type="password" id="password-input" placeholder="Password">
+            <button id="login-btn">Log In</button>
+            <button id="signup-btn" class="secondary">Sign Up</button>
+        </div>
+        <div id="user-ui" style="display: none;">
+            <span id="user-email"></span>
+            <button id="logout-btn">Log Out</button>
+        </div>
+        <div id="auth-message" class="auth-message"></div>
+    </div>
     
-    <div class="container">
+    <div class="container" style="display: none;">
         <div class="form-container">
             <h2>Add New Recipe</h2>
             <form id="recipe-form">
@@ -805,7 +884,7 @@
                     </div>
                 </div>
                 
-                <button type="submit">Add Recipe</button>
+                <button type="submit" id="add-recipe-btn">Add Recipe</button>
             </form>
         </div>
         
@@ -981,7 +1060,7 @@
                 
                 <input type="hidden" id="edit-recipe-index">
                 <input type="hidden" id="edit-recipe-image">
-                <button type="submit">Save Changes</button>
+                <button type="submit" id="update-recipe-btn">Save Changes</button>
             </form>
         </div>
     </div>
@@ -1019,7 +1098,27 @@
         </div>
     </div>
     
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+
     <script>
+        // Initialize Firebase with your config
+        const firebaseConfig = {
+            apiKey: "AIzaSyB6ZJzOPKRChSZvnSbbzlKuNHPP9DSPVxY",
+            authDomain: "recipe-collection-9639a.firebaseapp.com",
+            projectId: "recipe-collection-9639a",
+            storageBucket: "recipe-collection-9639a.firebasestorage.app",
+            messagingSenderId: "419770855420",
+            appId: "1:419770855420:web:e886d466cf5f5cb6a80c79"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
         // DOM Elements
         const recipeForm = document.getElementById('recipe-form');
         const recipeList = document.getElementById('recipe-list');
@@ -1036,6 +1135,19 @@
         const closeNutritionModal = document.querySelector('.close-nutrition');
         const filterTagsContainer = document.getElementById('filter-tags');
         const clearFiltersBtn = document.getElementById('clear-filters');
+        const authContainer = document.getElementById('auth-container');
+        const mainContainer = document.querySelector('.container');
+        const loginUI = document.getElementById('login-ui');
+        const userUI = document.getElementById('user-ui');
+        const userEmail = document.getElementById('user-email');
+        const emailInput = document.getElementById('email-input');
+        const passwordInput = document.getElementById('password-input');
+        const loginBtn = document.getElementById('login-btn');
+        const signupBtn = document.getElementById('signup-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const authMessage = document.getElementById('auth-message');
+        const addRecipeBtn = document.getElementById('add-recipe-btn');
+        const updateRecipeBtn = document.getElementById('update-recipe-btn');
         
         // Fixed: Changed from const to let to avoid variable shadowing in updateTotalCost
         let totalCostElement = document.getElementById('total-cost');
@@ -1058,8 +1170,11 @@
         const recipeTags = document.getElementById('recipe-tags');
         const editRecipeTags = document.getElementById('edit-recipe-tags');
         
-        // Load recipes from local storage
-        let recipes = JSON.parse(localStorage.getItem('recipes')) || [];
+        // Current user
+        let currentUser = null;
+        
+        // Recipes data
+        let recipes = [];
         
         // Current recipe ingredients
         let currentIngredients = [];
@@ -1069,6 +1184,105 @@
         
         // Active filters
         let activeFilters = [];
+
+        // Show loading state on button
+        function setButtonLoading(button, isLoading) {
+            if (isLoading) {
+                const originalText = button.textContent;
+                button.setAttribute('data-original-text', originalText);
+                button.innerHTML = `<div class="btn-loader"><span class="loading-spinner"></span>Loading...</div>`;
+                button.disabled = true;
+            } else {
+                const originalText = button.getAttribute('data-original-text') || 'Button';
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+        
+        // Show auth message
+        function showAuthMessage(message, isError = false) {
+            authMessage.textContent = message;
+            authMessage.style.color = isError ? 'red' : 'green';
+            
+            // Clear message after 5 seconds
+            setTimeout(() => {
+                authMessage.textContent = '';
+            }, 5000);
+        }
+        
+        // Load recipes from Firestore
+        async function loadRecipes() {
+            if (!currentUser) {
+                recipes = [];
+                return;
+            }
+            
+            try {
+                const snapshot = await db.collection('users').doc(currentUser.uid).collection('recipes').get();
+                recipes = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                displayFilterTags();
+                displayRecipes();
+                updateTotalCost();
+            } catch (error) {
+                console.error("Error loading recipes:", error);
+                recipes = [];
+            }
+        }
+        
+        // Save recipe to Firestore
+        async function saveRecipe(recipe) {
+            if (!currentUser) {
+                showAuthMessage("You must be logged in to save recipes", true);
+                return false;
+            }
+            
+            try {
+                const docRef = await db.collection('users').doc(currentUser.uid).collection('recipes').add(recipe);
+                return docRef.id;
+            } catch (error) {
+                console.error("Error saving recipe:", error);
+                showAuthMessage("Error saving recipe. Please try again.", true);
+                return false;
+            }
+        }
+        
+        // Update recipe in Firestore
+        async function updateRecipe(recipeId, recipe) {
+            if (!currentUser) {
+                showAuthMessage("You must be logged in to update recipes", true);
+                return false;
+            }
+            
+            try {
+                await db.collection('users').doc(currentUser.uid).collection('recipes').doc(recipeId).update(recipe);
+                return true;
+            } catch (error) {
+                console.error("Error updating recipe:", error);
+                showAuthMessage("Error updating recipe. Please try again.", true);
+                return false;
+            }
+        }
+        
+        // Delete recipe from Firestore
+        async function deleteRecipeFromDB(recipeId) {
+            if (!currentUser) {
+                showAuthMessage("You must be logged in to delete recipes", true);
+                return false;
+            }
+            
+            try {
+                await db.collection('users').doc(currentUser.uid).collection('recipes').doc(recipeId).delete();
+                return true;
+            } catch (error) {
+                console.error("Error deleting recipe:", error);
+                showAuthMessage("Error deleting recipe. Please try again.", true);
+                return false;
+            }
+        }
         
         // Process tags from string
         function processTags(tagsString) {
@@ -1183,8 +1397,7 @@
             
             recipeList.innerHTML = '';
             
-            filteredRecipes.forEach((recipe, index) => {
-                const recipeIndex = recipes.indexOf(recipe); // Get the actual index in the main recipes array
+            filteredRecipes.forEach((recipe) => {
                 const recipeCard = document.createElement('div');
                 recipeCard.className = 'recipe-card';
                 
@@ -1208,18 +1421,18 @@
                     <div class="recipe-image" style="background-image: url(${recipe.image})"></div>
                     <div class="recipe-details">
                         <div class="recipe-actions">
-                            <button class="btn-icon btn-nutrition" data-index="${recipeIndex}" title="View nutrition info">
+                            <button class="btn-icon btn-nutrition" data-id="${recipe.id}" title="View nutrition info">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"></path>
                                 </svg>
                             </button>
-                            <button class="btn-icon btn-edit" data-index="${recipeIndex}" title="Edit recipe">
+                            <button class="btn-icon btn-edit" data-id="${recipe.id}" title="Edit recipe">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
                                     <path d="m15 5 4 4"></path>
                                 </svg>
                             </button>
-                            <button class="btn-icon btn-delete" data-index="${recipeIndex}" title="Delete recipe">
+                            <button class="btn-icon btn-delete" data-id="${recipe.id}" title="Delete recipe">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M3 6h18"></path>
                                     <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
@@ -1232,7 +1445,7 @@
                         <p>${recipe.ingredients.length} ingredients</p>
                         ${costDisplay}
                         ${tagsDisplay}
-                        <input type="checkbox" class="recipe-checkbox" data-index="${recipeIndex}">
+                        <input type="checkbox" class="recipe-checkbox" data-id="${recipe.id}">
                     </div>
                 `;
                 
@@ -1242,22 +1455,22 @@
             // Add event listeners to buttons
             document.querySelectorAll('.btn-edit').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    const index = parseInt(this.dataset.index);
-                    openEditModal(index);
+                    const recipeId = this.dataset.id;
+                    openEditModal(recipeId);
                 });
             });
             
             document.querySelectorAll('.btn-delete').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    const index = parseInt(this.dataset.index);
-                    deleteRecipe(index);
+                    const recipeId = this.dataset.id;
+                    deleteRecipe(recipeId);
                 });
             });
             
             document.querySelectorAll('.btn-nutrition').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    const index = parseInt(this.dataset.index);
-                    openNutritionModal(index);
+                    const recipeId = this.dataset.id;
+                    openNutritionModal(recipeId);
                 });
             });
         }
@@ -1383,13 +1596,19 @@
             return word + 's';
         }
         
+        // Find recipe by ID
+        function findRecipeById(recipeId) {
+            return recipes.find(recipe => recipe.id === recipeId);
+        }
+        
         // Open edit modal
-        function openEditModal(index) {
-            const recipe = recipes[index];
+        function openEditModal(recipeId) {
+            const recipe = findRecipeById(recipeId);
+            if (!recipe) return;
             
             document.getElementById('edit-recipe-name').value = recipe.name;
             document.getElementById('edit-recipe-url').value = recipe.url;
-            document.getElementById('edit-recipe-index').value = index;
+            document.getElementById('edit-recipe-index').value = recipeId;
             document.getElementById('edit-recipe-image').value = recipe.image;
             
             // Set tags if they exist
@@ -1422,8 +1641,9 @@
         }
         
         // Open nutrition modal
-        function openNutritionModal(index) {
-            const recipe = recipes[index];
+        function openNutritionModal(recipeId) {
+            const recipe = findRecipeById(recipeId);
+            if (!recipe) return;
             
             // Set recipe name
             document.getElementById('nutrition-recipe-name').textContent = recipe.name + ' - Nutrition Facts';
@@ -1453,13 +1673,18 @@
         }
         
         // Delete recipe
-        function deleteRecipe(index) {
+        async function deleteRecipe(recipeId) {
             if (confirm('Are you sure you want to delete this recipe?')) {
-                recipes.splice(index, 1);
-                localStorage.setItem('recipes', JSON.stringify(recipes));
-                displayFilterTags();
-                displayRecipes();
-                updateTotalCost();
+                const success = await deleteRecipeFromDB(recipeId);
+                
+                if (success) {
+                    // Remove from local array
+                    recipes = recipes.filter(recipe => recipe.id !== recipeId);
+                    displayFilterTags();
+                    displayRecipes();
+                    updateTotalCost();
+                    showAuthMessage("Recipe deleted successfully");
+                }
             }
         }
         
@@ -1508,7 +1733,7 @@
             displayIngredients();
         });
         
-        // Add ingredient to edit list
+       // Add ingredient to edit list
         editAddIngredientBtn.addEventListener('click', function() {
             const name = editIngredientName.value.trim();
             
@@ -1555,8 +1780,15 @@
         });
         
         // Add new recipe
-        recipeForm.addEventListener('submit', function(e) {
+        recipeForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            if (!currentUser) {
+                showAuthMessage("You must be logged in to add recipes", true);
+                return;
+            }
+            
+            setButtonLoading(addRecipeBtn, true);
             
             const name = document.getElementById('recipe-name').value;
             const url = document.getElementById('recipe-url').value;
@@ -1566,18 +1798,20 @@
             // Validate ingredients
             if (currentIngredients.length === 0) {
                 alert('Please add at least one ingredient');
+                setButtonLoading(addRecipeBtn, false);
                 return;
             }
             
             // Check if image is selected
             if (!recipeImage.files[0]) {
                 alert('Please select an image for your recipe');
+                setButtonLoading(addRecipeBtn, false);
                 return;
             }
             
             const reader = new FileReader();
             
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 const newRecipe = {
                     name,
                     url,
@@ -1593,33 +1827,50 @@
                         fat: document.getElementById('fat').value,
                         carbs: document.getElementById('carbs').value,
                         fiber: document.getElementById('fiber').value
-                    }
+                    },
+                    createdAt: new Date()
                 };
                 
-                recipes.push(newRecipe);
-                localStorage.setItem('recipes', JSON.stringify(recipes));
+                const recipeId = await saveRecipe(newRecipe);
                 
-                // Reset form and current ingredients
-                recipeForm.reset();
-                previewImg.style.display = 'none';
-                currentIngredients = [];
-                displayIngredients();
+                if (recipeId) {
+                    // Add the recipe to the local array with its ID
+                    newRecipe.id = recipeId;
+                    recipes.push(newRecipe);
+                    
+                    // Reset form and current ingredients
+                    recipeForm.reset();
+                    previewImg.style.display = 'none';
+                    currentIngredients = [];
+                    displayIngredients();
+                    
+                    // Update recipes list and filter tags
+                    displayFilterTags();
+                    displayRecipes();
+                    
+                    showAuthMessage("Recipe added successfully!");
+                }
                 
-                // Update recipes list and filter tags
-                displayFilterTags();
-                displayRecipes();
+                setButtonLoading(addRecipeBtn, false);
             };
             
             reader.readAsDataURL(recipeImage.files[0]);
         });
         
         // Update recipe
-        editForm.addEventListener('submit', function(e) {
+        editForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            if (!currentUser) {
+                showAuthMessage("You must be logged in to update recipes", true);
+                return;
+            }
+            
+            setButtonLoading(updateRecipeBtn, true);
             
             const name = document.getElementById('edit-recipe-name').value;
             const url = document.getElementById('edit-recipe-url').value;
-            const index = parseInt(document.getElementById('edit-recipe-index').value);
+            const recipeId = document.getElementById('edit-recipe-index').value;
             const image = document.getElementById('edit-recipe-image').value;
             const tagsString = document.getElementById('edit-recipe-tags').value;
             const tags = processTags(tagsString);
@@ -1627,10 +1878,11 @@
             // Validate ingredients
             if (editIngredients.length === 0) {
                 alert('Please add at least one ingredient');
+                setButtonLoading(updateRecipeBtn, false);
                 return;
             }
             
-            recipes[index] = {
+            const updatedRecipe = {
                 name,
                 url,
                 image,
@@ -1645,22 +1897,40 @@
                     fat: document.getElementById('edit-fat').value,
                     carbs: document.getElementById('edit-carbs').value,
                     fiber: document.getElementById('edit-fiber').value
-                }
+                },
+                updatedAt: new Date()
             };
             
-            localStorage.setItem('recipes', JSON.stringify(recipes));
+            const success = await updateRecipe(recipeId, updatedRecipe);
             
-            // Close modal and update recipes list
-            editModal.style.display = 'none';
-            displayFilterTags();
-            displayRecipes();
-            updateTotalCost();
+            if (success) {
+                // Update the recipe in the local array
+                const index = recipes.findIndex(r => r.id === recipeId);
+                if (index !== -1) {
+                    recipes[index] = { 
+                        ...updatedRecipe, 
+                        id: recipeId,
+                        createdAt: recipes[index].createdAt 
+                    };
+                }
+                
+                // Close modal and update recipes list
+                editModal.style.display = 'none';
+                displayFilterTags();
+                displayRecipes();
+                updateTotalCost();
+                
+                showAuthMessage("Recipe updated successfully!");
+            }
+            
+            setButtonLoading(updateRecipeBtn, false);
         });
         
         // Get consolidated ingredients from selected recipes
         getIngredientsBtn.addEventListener('click', function() {
             const selectedRecipes = Array.from(document.querySelectorAll('.recipe-checkbox:checked'))
-                .map(checkbox => recipes[parseInt(checkbox.dataset.index)]);
+                .map(checkbox => findRecipeById(checkbox.dataset.id))
+                .filter(recipe => recipe); // Filter out any undefined values
             
             if (selectedRecipes.length === 0) {
                 alert('Please select at least one recipe to generate shopping list');
@@ -1782,11 +2052,12 @@
             }
         });
         
-        // FIXED: Update total cost function
+        // Update total cost function
         function updateTotalCost() {
             totalCostElement = document.getElementById('total-cost');
             const selectedRecipes = Array.from(document.querySelectorAll('.recipe-checkbox:checked'))
-                .map(checkbox => recipes[parseInt(checkbox.dataset.index)]);
+                .map(checkbox => findRecipeById(checkbox.dataset.id))
+                .filter(recipe => recipe); // Filter out any undefined values
             
             let totalCost = 0;
             selectedRecipes.forEach(recipe => {
@@ -1805,11 +2076,92 @@
             }
         });
         
-        // Initialize
-        displayFilterTags();
-        displayRecipes();
-        displayIngredients();
-        updateTotalCost();
+        // Sign up with email and password
+        signupBtn.addEventListener('click', async function() {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            
+            if (!email || !password) {
+                showAuthMessage("Please enter both email and password", true);
+                return;
+            }
+            
+            setButtonLoading(signupBtn, true);
+            
+            try {
+                await auth.createUserWithEmailAndPassword(email, password);
+                showAuthMessage("Account created successfully!");
+            } catch (error) {
+                console.error("Error creating account:", error);
+                showAuthMessage(error.message, true);
+            } finally {
+                setButtonLoading(signupBtn, false);
+            }
+        });
+        
+        // Login with email and password
+        loginBtn.addEventListener('click', async function() {
+            const email = emailInput.value.trim();
+            const password = passwordInput.value;
+            
+            if (!email || !password) {
+                showAuthMessage("Please enter both email and password", true);
+                return;
+            }
+            
+            setButtonLoading(loginBtn, true);
+            
+            try {
+                await auth.signInWithEmailAndPassword(email, password);
+                showAuthMessage("Logged in successfully!");
+            } catch (error) {
+                console.error("Error signing in:", error);
+                showAuthMessage(error.message, true);
+            } finally {
+                setButtonLoading(loginBtn, false);
+            }
+        });
+        
+        // Logout
+        logoutBtn.addEventListener('click', async function() {
+            try {
+                await auth.signOut();
+                showAuthMessage("Logged out successfully!");
+            } catch (error) {
+                console.error("Error signing out:", error);
+                showAuthMessage(error.message, true);
+            }
+        });
+        
+        // Auth state change listener
+        auth.onAuthStateChanged(async function(user) {
+            if (user) {
+                // User is signed in
+                currentUser = user;
+                userEmail.textContent = user.email;
+                loginUI.style.display = 'none';
+                userUI.style.display = 'flex';
+                mainContainer.style.display = 'grid';
+                
+                // Load user's recipes
+                await loadRecipes();
+            } else {
+                // User is signed out
+                currentUser = null;
+                loginUI.style.display = 'flex';
+                userUI.style.display = 'none';
+                mainContainer.style.display = 'none';
+                recipes = [];
+            }
+        });
+        
+        // Initialize the app
+        function initialize() {
+            displayIngredients();
+        }
+        
+        // Start the app
+        initialize();
     </script>
 </body>
 </html>
