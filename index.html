@@ -1871,6 +1871,12 @@
             }
             
             setButtonLoading(addRecipeBtn, true);
+
+            // Add timeout to prevent infinite loading
+    const loadingTimeout = setTimeout(() => {
+        setButtonLoading(addRecipeBtn, false);
+        showAuthMessage("Request timed out. Try using a smaller image or check your connection.", true);
+    }, 30000);
             
             const name = document.getElementById('recipe-name').value;
             const url = document.getElementById('recipe-url').value;
@@ -1894,47 +1900,82 @@
             const reader = new FileReader();
             
             reader.onload = async function(e) {
-                const newRecipe = {
-                    name,
-                    url,
-                    image: e.target.result,
-                    ingredients: currentIngredients,
-                    tags: tags,
-                    cost: document.getElementById('recipe-cost').value,
-                    nutrition: {
-                        servingSize: document.getElementById('serving-size').value,
-                        servings: document.getElementById('servings').value,
-                        calories: document.getElementById('calories').value,
-                        protein: document.getElementById('protein').value,
-                        fat: document.getElementById('fat').value,
-                        carbs: document.getElementById('carbs').value,
-                        fiber: document.getElementById('fiber').value
-                    },
-                    createdAt: new Date()
-                };
-                
-                const recipeId = await saveRecipe(newRecipe);
-                
-                if (recipeId) {
-                    // Add the recipe to the local array with its ID
-                    newRecipe.id = recipeId;
-                    recipes.push(newRecipe);
-                    
-                    // Reset form and current ingredients
-                    recipeForm.reset();
-                    previewImg.style.display = 'none';
-                    currentIngredients = [];
-                    displayIngredients();
-                    
-                    // Update recipes list and filter tags
-                    displayFilterTags();
-                    displayRecipes();
-                    
-                    showAuthMessage("Recipe added successfully!");
-                }
-                
-                setButtonLoading(addRecipeBtn, false);
-            };
+    // Clear the loading timeout
+    clearTimeout(loadingTimeout);
+    
+    // Optimize image before saving
+    const img = new Image();
+    img.onload = async function() {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+            if (width > MAX_WIDTH) {
+                height *= MAX_WIDTH / width;
+                width = MAX_WIDTH;
+            }
+        } else {
+            if (height > MAX_HEIGHT) {
+                width *= MAX_HEIGHT / height;
+                height = MAX_HEIGHT;
+            }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Get compressed image as data URL (0.7 quality - good balance between quality and size)
+        const compressedImage = canvas.toDataURL('image/jpeg', 0.7);
+        
+        const newRecipe = {
+            name,
+            url,
+            image: compressedImage,
+            ingredients: currentIngredients,
+            tags: tags,
+            cost: document.getElementById('recipe-cost').value,
+            nutrition: {
+                servingSize: document.getElementById('serving-size').value,
+                servings: document.getElementById('servings').value,
+                calories: document.getElementById('calories').value,
+                protein: document.getElementById('protein').value,
+                fat: document.getElementById('fat').value,
+                carbs: document.getElementById('carbs').value,
+                fiber: document.getElementById('fiber').value
+            },
+            createdAt: new Date()
+        };
+        
+        const recipeId = await saveRecipe(newRecipe);
+        
+        if (recipeId) {
+            // Add the recipe to the local array with its ID
+            newRecipe.id = recipeId;
+            recipes.push(newRecipe);
+            
+            // Reset form and current ingredients
+            recipeForm.reset();
+            previewImg.style.display = 'none';
+            currentIngredients = [];
+            displayIngredients();
+            
+            // Update recipes list and filter tags
+            displayFilterTags();
+            displayRecipes();
+            
+            showAuthMessage("Recipe added successfully!");
+        }
+        
+        setButtonLoading(addRecipeBtn, false);
+    };
+    
+    img.src = e.target.result;
+};
             
             reader.readAsDataURL(recipeImage.files[0]);
         });
