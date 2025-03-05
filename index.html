@@ -797,6 +797,21 @@
             padding: 0 10px;
             color: #666;
         }
+
+        .url-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .url-input-group input {
+            flex: 1;
+        }
+
+        .url-input-group button {
+            width: auto;
+            white-space: nowrap;
+            padding: 10px 15px;
+        }
     </style>
 </head>
 <body>
@@ -841,7 +856,12 @@
                 
                 <div class="form-group">
                     <label for="recipe-url">Recipe URL</label>
-                    <input type="text" id="recipe-url" placeholder="https://example.com/recipe" required>
+                    <div class="url-input-group">
+                        <input type="text" id="recipe-url" placeholder="https://example.com/recipe" required>
+                        <button type="button" id="fetch-recipe-btn" class="secondary">
+                            <span class="btn-text">Fetch Recipe</span>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -2303,6 +2323,76 @@
         
         // Start the app
         initialize();
+
+        // Add this with your other DOM element declarations
+        const fetchRecipeBtn = document.getElementById('fetch-recipe-btn');
+        const recipeUrlInput = document.getElementById('recipe-url');
+
+        // Add this function with your other functions
+        async function fetchRecipeFromUrl(url) {
+            try {
+                setButtonLoading(fetchRecipeBtn, true);
+                
+                // First, extract recipe information from URL
+                const response = await fetch(`https://api.spoonacular.com/recipes/extract?apiKey=0406405a7d1f41eebaa0b9706f3ae333&url=${encodeURIComponent(url)}`, {
+                    method: 'GET'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to fetch recipe');
+                }
+
+                const recipe = await response.json();
+
+                // Populate the form with the scraped data
+                document.getElementById('recipe-name').value = recipe.title || '';
+                
+                // Handle ingredients
+                currentIngredients = (recipe.extendedIngredients || []).map(ing => ({
+                    name: ing.name || ing.originalName,
+                    amount: ing.amount || '',
+                    unit: ing.unit || ''
+                }));
+                displayIngredients();
+
+                // Handle nutrition if available
+                if (recipe.nutrition && recipe.nutrition.nutrients) {
+                    const nutrients = recipe.nutrition.nutrients;
+                    document.getElementById('serving-size').value = recipe.servings || '';
+                    document.getElementById('servings').value = recipe.servings || '';
+                    
+                    // Find specific nutrients
+                    const calories = nutrients.find(n => n.title === 'Calories');
+                    const protein = nutrients.find(n => n.title === 'Protein');
+                    const fat = nutrients.find(n => n.title === 'Fat');
+                    const carbs = nutrients.find(n => n.title === 'Carbohydrates');
+                    const fiber = nutrients.find(n => n.title === 'Fiber');
+
+                    document.getElementById('calories').value = calories ? calories.amount : '';
+                    document.getElementById('protein').value = protein ? protein.amount : '';
+                    document.getElementById('fat').value = fat ? fat.amount : '';
+                    document.getElementById('carbs').value = carbs ? carbs.amount : '';
+                    document.getElementById('fiber').value = fiber ? fiber.amount : '';
+                }
+
+                showAuthMessage('Recipe fetched successfully!');
+            } catch (error) {
+                console.error('Error fetching recipe:', error);
+                showAuthMessage('Failed to fetch recipe. Please try entering details manually.', true);
+            } finally {
+                setButtonLoading(fetchRecipeBtn, false);
+            }
+        }
+
+        // Add this event listener with your other listeners
+        fetchRecipeBtn.addEventListener('click', function() {
+            const url = recipeUrlInput.value.trim();
+            if (!url) {
+                showAuthMessage('Please enter a valid URL', true);
+                return;
+            }
+            fetchRecipeFromUrl(url);
+        });
     </script>
 </body>
 </html>
