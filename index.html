@@ -812,51 +812,6 @@
             white-space: nowrap;
             padding: 10px 15px;
         }
-
-        .recipe-scaling {
-            margin: 10px 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .scale-select {
-            padding: 5px;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-        }
-
-        .recipe-ingredients {
-            margin: 10px 0;
-            padding: 10px;
-            background-color: var(--light-bg);
-            border-radius: 4px;
-        }
-
-        .recipe-ingredients .ingredient-item {
-            padding: 4px 0;
-            border-bottom: 1px dashed var(--border-color);
-        }
-
-        .recipe-ingredients .ingredient-item:last-child {
-            border-bottom: none;
-        }
-
-        .recipe-instructions {
-            margin: 15px 0;
-            padding: 15px;
-            background-color: var(--light-bg);
-            border-radius: 4px;
-        }
-
-        .recipe-instructions ol {
-            margin: 0;
-            padding-left: 20px;
-        }
-
-        .recipe-instructions li {
-            margin: 8px 0;
-        }
     </style>
 </head>
 <body>
@@ -1028,12 +983,6 @@
                         <span class="currency-symbol">$</span>
                         <input type="number" id="recipe-cost" placeholder="Total cost" min="0" step="0.01">
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="recipe-instructions">Instructions</label>
-                    <textarea id="recipe-instructions" placeholder="Enter recipe instructions step by step..." rows="6"></textarea>
-                    <small class="hint">Separate each step with a new line</small>
                 </div>
                 
                 <button type="submit" id="add-recipe-btn">Add Recipe</button>
@@ -1208,23 +1157,6 @@
                         <span class="currency-symbol">$</span>
                         <input type="number" id="edit-recipe-cost" placeholder="Total cost" min="0" step="0.01">
                     </div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="edit-recipe-instructions">Instructions</label>
-                    <textarea id="edit-recipe-instructions" placeholder="Enter recipe instructions step by step..." rows="6"></textarea>
-                    <small class="hint">Separate each step with a new line</small>
-                </div>
-                
-                <div class="form-group">
-                    <label for="edit-recipe-image">Recipe Image</label>
-                    <div class="image-preview">
-                        <img id="edit-preview-img" src="#" alt="Preview">
-                    </div>
-                    <label class="custom-file-upload">
-                        <input type="file" id="edit-recipe-image" accept="image/*">
-                        Change Image
-                    </label>
                 </div>
                 
                 <input type="hidden" id="edit-recipe-index">
@@ -1612,44 +1544,10 @@
                         </div>
                         <h3>${recipe.name}</h3>
                         <a href="${recipe.url}" target="_blank" class="recipe-url">${recipe.url}</a>
-                        
-                        <!-- Add ingredients container -->
-                        <div class="recipe-ingredients">
-                            ${recipe.ingredients.map(ing => `
-                                <div class="ingredient-item">
-                                    ${ing.amount ? ing.amount + ' ' : ''}${ing.unit ? ing.unit + ' ' : ''}${ing.name}
-                                </div>
-                            `).join('')}
-                        </div>
-                        
                         <p>${recipe.ingredients.length} ingredients</p>
                         ${costDisplay}
                         ${tagsDisplay}
                         <input type="checkbox" class="recipe-checkbox" data-id="${recipe.id}">
-                        
-                        <!-- Add instructions if they exist -->
-                        ${recipe.instructions ? `
-                            <div class="recipe-instructions">
-                                <h4>Instructions</h4>
-                                <ol>
-                                    ${recipe.instructions.split('\n').filter(step => step.trim()).map(step => `
-                                        <li>${step.trim()}</li>
-                                    `).join('')}
-                                </ol>
-                            </div>
-                        ` : ''}
-                        
-                        <!-- Add scaling controls -->
-                        <div class="recipe-scaling">
-                            <label for="scale-${recipe.id}">Scale Recipe:</label>
-                            <select id="scale-${recipe.id}" class="scale-select" data-recipe-id="${recipe.id}">
-                                <option value="0.5">Half (½×)</option>
-                                <option value="1" selected>Original (1×)</option>
-                                <option value="1.5">1½×</option>
-                                <option value="2">Double (2×)</option>
-                                <option value="3">Triple (3×)</option>
-                            </select>
-                        </div>
                     </div>
                 `;
                 
@@ -1813,13 +1711,7 @@
             document.getElementById('edit-recipe-name').value = recipe.name;
             document.getElementById('edit-recipe-url').value = recipe.url;
             document.getElementById('edit-recipe-index').value = recipeId;
-            
-            // Set instructions if they exist
-            document.getElementById('edit-recipe-instructions').value = recipe.instructions || '';
-            
-            // Set the current image preview
-            editPreviewImg.src = recipe.image;
-            editPreviewImg.style.display = 'block';
+            document.getElementById('edit-recipe-image').value = recipe.image;
             
             // Set tags if they exist
             if (recipe.tags && Array.isArray(recipe.tags)) {
@@ -2122,7 +2014,7 @@
             const name = document.getElementById('edit-recipe-name').value;
             const url = document.getElementById('edit-recipe-url').value;
             const recipeId = document.getElementById('edit-recipe-index').value;
-            let image = document.getElementById('edit-recipe-image').value;
+            const image = document.getElementById('edit-recipe-image').value;
             const tagsString = document.getElementById('edit-recipe-tags').value;
             const tags = processTags(tagsString);
             
@@ -2139,7 +2031,6 @@
                 image,
                 ingredients: editIngredients,
                 tags: tags,
-                instructions: document.getElementById('edit-recipe-instructions').value,
                 cost: document.getElementById('edit-recipe-cost').value,
                 nutrition: {
                     servingSize: document.getElementById('edit-serving-size').value,
@@ -2502,32 +2393,8 @@
             }
             fetchRecipeFromUrl(url);
         });
-
-        // Add event listener for scaling
-        recipeList.addEventListener('change', function(e) {
-            if (e.target.classList.contains('scale-select')) {
-                const recipeId = e.target.dataset.recipeId;
-                const scale = parseFloat(e.target.value);
-                const recipe = findRecipeById(recipeId);
-                
-                if (!recipe) return;
-                
-                // Find the ingredients container for this recipe
-                const ingredientsContainer = e.target.closest('.recipe-card').querySelector('.recipe-ingredients');
-                
-                // Update the displayed ingredients with scaled amounts
-                const scaledIngredientsHtml = recipe.ingredients.map(ing => {
-                    const scaledAmount = scaleIngredient(ing.amount, scale);
-                    return `
-                        <div class="ingredient-item">
-                            ${scaledAmount ? scaledAmount + ' ' : ''}${ing.unit ? ing.unit + ' ' : ''}${ing.name}
-                        </div>
-                    `;
-                }).join('');
-                
-                ingredientsContainer.innerHTML = scaledIngredientsHtml;
-            }
-        });
     </script>
 </body>
 </html>
+
+
